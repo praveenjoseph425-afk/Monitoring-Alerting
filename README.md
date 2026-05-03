@@ -179,7 +179,9 @@ Node Exporter is an open-source tool that exposes a wide variety of hardware- an
   ## if you want to create custom dashbord just use these queires
   - For cloudwatch
     ```
-    SELECT AVG(CPUUtilization) FROM "AWS/EC2"
+   SELECT AVG(CPUUtilization)
+FROM "AWS/EC2"
+GROUP BY InstanceId
     ```
 
 ###  for promothious
