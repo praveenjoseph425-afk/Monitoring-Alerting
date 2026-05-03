@@ -22,7 +22,7 @@ tar -xvf prometheus-2.55.1.linux-amd64.tar.gz
 cd prometheus-2.55.1.linux-amd64
 
 sudo cp prometheus promtool /usr/local/bin/
-sudo chown prometheus:prometheus /usr/local/bin/prometheus
+sudo chown prometheus:prometheus /usr/local/bin/prometheus /usr/local/bin/promtool
 
 sudo cp -r consoles console_libraries /etc/prometheus/
 sudo chown -R prometheus:prometheus /etc/prometheus
@@ -67,7 +67,7 @@ sudo cp alertmanager amtool /usr/local/bin/
 sudo mkdir -p /etc/alertmanager /var/lib/alertmanager
 sudo chown -R prometheus:prometheus /etc/alertmanager /var/lib/alertmanager
 
-# Alertmanager config (WITH PAGERDUTY)
+# Alertmanager config
 sudo tee /etc/alertmanager/alertmanager.yml >/dev/null <<'EOF'
 route:
   receiver: pagerduty
@@ -125,7 +125,7 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-# ============ 6. Alert Rules (FIXED SYNTAX ONLY) ============
+# ============ 6. Alert Rules (FIXED) ============
 sudo tee /etc/prometheus/alert.rules.yml >/dev/null <<'EOF'
 groups:
 - name: system-alerts
@@ -137,11 +137,12 @@ groups:
       severity: critical
 
   - alert: HighCPUUsage
-    expr: 100 - (
-      sum by(instance) (rate(node_cpu_seconds_total{mode="idle"}[1m]))
-      /
-      sum by(instance) (rate(node_cpu_seconds_total[1m]))
-    ) * 100 > 40
+    expr: >
+      100 - (
+        sum by(instance) (rate(node_cpu_seconds_total{mode="idle"}[1m]))
+        /
+        sum by(instance) (rate(node_cpu_seconds_total[1m]))
+      ) * 100 > 40
     for: 2m
     labels:
       severity: warning
@@ -150,13 +151,18 @@ groups:
       description: "CPU usage is above 40% for more than 2 minutes"
 
   - alert: HighDiskUsage
-    expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"})) * 100 > 80
+    expr: >
+      (1 - (
+        node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} 
+        / 
+        node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}
+      )) * 100 > 80
     for: 2m
     labels:
       severity: warning
 EOF
 
-# ============ 7. Prometheus Config (UNCHANGED) ============
+# ============ 7. Prometheus Config ============
 sudo tee /etc/prometheus/prometheus.yml >/dev/null <<'EOF'
 global:
   scrape_interval: 15s
